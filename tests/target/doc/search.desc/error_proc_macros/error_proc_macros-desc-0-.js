@@ -1,1 +1,0 @@
-searchState.loadedDescShard("error_proc_macros", 0, "Creates a error type from an enum.")

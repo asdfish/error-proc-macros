@@ -1,1 +1,0 @@
-C:\msys64\home\chifa\files\programming\error-proc-macros\tests\target\debug\tests.exe: C:\msys64\home\chifa\files\programming\error-proc-macros\src\lib.rs C:\msys64\home\chifa\files\programming\error-proc-macros\tests\src\main.rs
