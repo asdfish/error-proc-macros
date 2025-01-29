@@ -3,7 +3,7 @@ use {
     proc_macro_error::{Diagnostic, Level, proc_macro_error},
     quote::quote,
     std::{collections::HashMap, str::FromStr},
-    syn::{Data, DeriveInput, parse_macro_input},
+    syn::{Data, DeriveInput, Fields, parse_macro_input},
 };
 
 /// Creates a error type from an enum.
@@ -39,7 +39,19 @@ pub fn enum_error(input: TokenStream) -> TokenStream {
                 &variant.ident,
             )
         })
-        .flat_map(|(option, ident)| Some((option?, ident)))
+        .map(|(option, ident)| {
+            (
+                option.unwrap_or_else(|| {
+                    Diagnostic::new(
+                        Level::Error,
+                        String::from("all variants of an EnumError must be a named field"),
+                    )
+                    .help(format!("change field {} to have a type", ident))
+                    .abort()
+                }),
+                ident,
+            )
+        })
         .for_each(|(ty, ident)| {
             variants
                 .entry(ty)
