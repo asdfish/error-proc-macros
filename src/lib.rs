@@ -29,7 +29,7 @@ pub fn error(input: TokenStream) -> TokenStream {
 
 /// Creates a error type from an enum.
 /// # Attributes
-/// | Attribute | Used on enum         | On on variant                                                 |
+/// | Attribute | Used on enum         | Used on variant                                               |
 /// | --------- | -------------------- | ------------------------------------------------------------- |
 /// | format    | Formats all variants | Formats this variant                                          |
 /// | message   | Does nothing         | Makes the variant use this message if it does not have a type |
