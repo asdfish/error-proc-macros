@@ -1,9 +1,11 @@
+mod common;
+mod enum_error;
+mod prelude;
+mod struct_error;
+
 use {
-    proc_macro::TokenStream,
-    proc_macro_error::{Diagnostic, Level, proc_macro_error},
-    quote::quote,
-    std::collections::HashMap,
-    syn::{Data, DeriveInput, Expr, Lit, Meta, parse_macro_input},
+    prelude::*,
+    enum_error::EnumError,
 };
 
 /// Saves you from typing ```impl std::error::Error for FooError {}```.
@@ -21,7 +23,8 @@ pub fn error(input: TokenStream) -> TokenStream {
 
     quote! {
         impl std::error::Error for #ident {}
-    }.into()
+    }
+    .into()
 }
 
 /// Creates a error type from an enum.
@@ -65,99 +68,8 @@ pub fn error(input: TokenStream) -> TokenStream {
 #[proc_macro_error]
 pub fn enum_error(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
-    let ident = &input.ident;
 
-    let Data::Enum(data) = input.data else {
-        Diagnostic::new(
-            Level::Error,
-            format!("EnumError cannot be called on non enum \"{}\"", ident),
-        )
-        .abort()
-    };
-
-    let mut variants = HashMap::new();
-
-    data.variants
-        .iter()
-        .map(|variant| {
-            (
-                variant.fields.iter().map(|field| &field.ty).next(),
-                &variant.ident,
-            )
-        })
-        .map(|(option, ident)| {
-            (
-                option.unwrap_or_else(|| {
-                    Diagnostic::new(
-                        Level::Error,
-                        String::from("all variants of an EnumError must be a named field"),
-                    )
-                    .help(format!("change field {} to have a type", ident))
-                    .abort()
-                }),
-                ident,
-            )
-        })
-        .for_each(|(ty, ident)| {
-            variants
-                .entry(ty)
-                .and_modify(|_| {
-                    Diagnostic::new(
-                        Level::Error,
-                        String::from("error variants should contain different types"),
-                    )
-                    .help(format!("remove field \"{}\"", ident))
-                    .abort()
-                })
-                .or_insert(ident);
-        });
-
-    let mut token_stream = variants
-        .iter()
-        .map(|(field_ty, field_ident)| {
-            quote! {
-                #[automatically_derived]
-                impl From<#field_ty> for #ident {
-                    fn from(error: #field_ty) -> Self {
-                        Self::#field_ident(error)
-                    }
-                }
-            }
-        })
-        .collect::<proc_macro2::TokenStream>();
-
-    token_stream.extend(if variants.len() > 1 {
-        let match_arms = variants
-            .iter()
-            .map(|(_, ident)| {
-                quote! {
-                    Self::#ident(error) => write!(f, "{}", error),
-                }
-            })
-            .collect::<proc_macro2::TokenStream>();
-
-        quote! {
-            #[automatically_derived]
-            impl std::fmt::Display for #ident {
-                fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-                    match self {
-                        #match_arms
-                    }
-                }
-            }
-        }
-    } else {
-        quote! {
-            #[automatically_derived]
-            impl std::fmt::Display for #ident {
-                fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-                    write!(f, "{}", self)
-                }
-            }
-        }
-    });
-
-    token_stream.into()
+    EnumError::from(&input).into_token_stream().into()
 }
 
 #[proc_macro_derive(StructError, attributes(format))]
@@ -214,20 +126,24 @@ pub fn struct_error(input: TokenStream) -> TokenStream {
             .abort()
         });
 
-    let field_declarations = data.fields.iter().map(|field| {
-        field.ident.as_ref().unwrap_or_else(|| {
-            Diagnostic::new(
-                Level::Error,
-                String::from("`StructError` can only be used on structs with named fields"),
-            )
-            .abort()
+    let field_declarations = data
+        .fields
+        .iter()
+        .map(|field| {
+            field.ident.as_ref().unwrap_or_else(|| {
+                Diagnostic::new(
+                    Level::Error,
+                    String::from("`StructError` can only be used on structs with named fields"),
+                )
+                .abort()
+            })
         })
-    })
         .map(|ident| {
             quote! {
                 let #ident = &self.#ident;
             }
-        }).collect::<proc_macro2::TokenStream>();
+        })
+        .collect::<TokenStream2>();
 
     quote! {
         #[automatically_derived]
