@@ -29,9 +29,10 @@ pub fn error(input: TokenStream) -> TokenStream {
 
 /// Creates a error type from an enum.
 /// # Attributes
-/// | Attribute | Used on enum                                                                                               | On on variant                                                 |
-/// | --------- | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
-/// | message   | Allows variants with no types where if they do not have a message attribute, they use this generic message | Makes the variant use this message if it does not have a type |
+/// | Attribute | Used on enum         | On on variant                                                 |
+/// | --------- | -------------------- | ------------------------------------------------------------- |
+/// | format    | Formats all variants | Formats this variant                                          |
+/// | message   | Does nothing         | Makes the variant use this message if it does not have a type |
 /// # Example
 /// ```
 /// use std::ffi::{
@@ -41,13 +42,10 @@ pub fn error(input: TokenStream) -> TokenStream {
 ///   IntoStringError,
 /// };
 ///
-/// #[derive(StructError)]
-/// #[format = "unexpected null pointer"]
-/// pub struct NullError;
-///
 /// #[derive(EnumError)]
 /// pub enum MyError {
 ///     IntoString(IntoStringError),
+///     #[message = "unexpected null pointer"]
 ///     Null(NullError),
 /// }
 /// pub fn ptr_to_string<c_char>(ptr: *const c_char) -> Result<String, MyError> {
@@ -55,16 +53,7 @@ pub fn error(input: TokenStream) -> TokenStream {
 ///    CStr::from_ptr(ptr).into_c_string().into_string()?
 /// }
 /// ```
-/// # Errors
-/// ```compile_fail
-/// #[derive(EnumError)]
-/// struct MyStruct { foo: u8, bar: i16 } // not an enum
-/// #[derive(EnumError)]
-/// union MyUnion { foo: u8, bar: i16 } // not an enum
-/// #[derive(EnumError)]
-/// enum MyEnum { Foo = 0, Bar, Baz(u8) } // contains variants with no types
-/// ```
-#[proc_macro_derive(EnumError, attributes(message))]
+#[proc_macro_derive(EnumError, attributes(format, message))]
 #[proc_macro_error]
 pub fn enum_error(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);

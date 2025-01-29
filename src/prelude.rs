@@ -1,6 +1,5 @@
 pub use {
     proc_macro::TokenStream,
-    proc_macro2::Span,
     proc_macro_error::{Diagnostic, Level, proc_macro_error},
     quote::{
         quote,
