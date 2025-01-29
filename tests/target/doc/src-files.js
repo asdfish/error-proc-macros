@@ -1,0 +1,3 @@
+var srcIndex = new Map(JSON.parse('[["error_proc_macros",["",[],["lib.rs"]]],["proc_macro2",["",[],["detection.rs","extra.rs","fallback.rs","lib.rs","marker.rs","parse.rs","rcvec.rs","wrapper.rs"]]],["proc_macro_error",["",[["imp",[],["delegate.rs"]]],["diagnostic.rs","dummy.rs","lib.rs","macros.rs","sealed.rs"]]],["proc_macro_error_attr",["",[],["lib.rs","parse.rs","settings.rs"]]],["quote",["",[],["ext.rs","format.rs","ident_fragment.rs","lib.rs","runtime.rs","spanned.rs","to_tokens.rs"]]],["tests",["",[],["main.rs"]]],["unicode_ident",["",[],["lib.rs","tables.rs"]]]]'));
+createSrcSidebar();
+//{"start":36,"fragment_lengths":[40,122,117,70,111,30,49]}

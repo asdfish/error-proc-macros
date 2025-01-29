@@ -1,0 +1,10 @@
+C:\msys64\home\chifa\files\programming\error-proc-macros\tests\target\debug\deps\libversion_check-b57b437ec8936047.rmeta: C:/msys64/home/chifa/.cargo/registry\src\index.crates.io-1949cf8c6b5b557f\version_check-0.9.5\src\lib.rs C:/msys64/home/chifa/.cargo/registry\src\index.crates.io-1949cf8c6b5b557f\version_check-0.9.5\src\version.rs C:/msys64/home/chifa/.cargo/registry\src\index.crates.io-1949cf8c6b5b557f\version_check-0.9.5\src\channel.rs C:/msys64/home/chifa/.cargo/registry\src\index.crates.io-1949cf8c6b5b557f\version_check-0.9.5\src\date.rs
+
+C:\msys64\home\chifa\files\programming\error-proc-macros\tests\target\debug\deps\libversion_check-b57b437ec8936047.rlib: C:/msys64/home/chifa/.cargo/registry\src\index.crates.io-1949cf8c6b5b557f\version_check-0.9.5\src\lib.rs C:/msys64/home/chifa/.cargo/registry\src\index.crates.io-1949cf8c6b5b557f\version_check-0.9.5\src\version.rs C:/msys64/home/chifa/.cargo/registry\src\index.crates.io-1949cf8c6b5b557f\version_check-0.9.5\src\channel.rs C:/msys64/home/chifa/.cargo/registry\src\index.crates.io-1949cf8c6b5b557f\version_check-0.9.5\src\date.rs
+
+C:\msys64\home\chifa\files\programming\error-proc-macros\tests\target\debug\deps\version_check-b57b437ec8936047.d: C:/msys64/home/chifa/.cargo/registry\src\index.crates.io-1949cf8c6b5b557f\version_check-0.9.5\src\lib.rs C:/msys64/home/chifa/.cargo/registry\src\index.crates.io-1949cf8c6b5b557f\version_check-0.9.5\src\version.rs C:/msys64/home/chifa/.cargo/registry\src\index.crates.io-1949cf8c6b5b557f\version_check-0.9.5\src\channel.rs C:/msys64/home/chifa/.cargo/registry\src\index.crates.io-1949cf8c6b5b557f\version_check-0.9.5\src\date.rs
+
+C:/msys64/home/chifa/.cargo/registry\src\index.crates.io-1949cf8c6b5b557f\version_check-0.9.5\src\lib.rs:
+C:/msys64/home/chifa/.cargo/registry\src\index.crates.io-1949cf8c6b5b557f\version_check-0.9.5\src\version.rs:
+C:/msys64/home/chifa/.cargo/registry\src\index.crates.io-1949cf8c6b5b557f\version_check-0.9.5\src\channel.rs:
+C:/msys64/home/chifa/.cargo/registry\src\index.crates.io-1949cf8c6b5b557f\version_check-0.9.5\src\date.rs:
