@@ -1,12 +1,16 @@
-use error_proc_macros::EnumError;
+use error_proc_macros::{
+    *,
+};
 
-#[derive(EnumError)]
-enum MyError {
-    Foo(u8),
-    Bar(i8),
-    Baz,
+#[derive(Debug, Error, StructError)]
+#[format = "{foo}"]
+struct MyError {
+    foo: &'static str
 }
 
 fn main() {
-    println!("Hello, world!");
+    let my_error = MyError {
+        foo: "hello world"
+    };
+    println!("{}", my_error);
 }
