@@ -7,7 +7,7 @@ use {
     syn::{Data, DeriveInput, Expr, Ident, Lit, Meta, Path, parse_macro_input},
 };
 
-/// Saves you from typing ```impl std::error::Error for _ {}```.
+/// Saves you from typing ```impl std::error::Error for FooError {}```.
 /// # Examples
 /// ```
 /// #[derive(Debug, Error, StructError)]
@@ -26,7 +26,29 @@ pub fn error(input: TokenStream) -> TokenStream {
 }
 
 /// Creates a error type from an enum.
+/// # Example
+/// ```
+/// use std::ffi::{
+///   c_char,
+///   CStr,
+///   CString,
+///   IntoStringError,
+/// };
 ///
+/// #[derive(StructError)]
+/// #[format = "unexpected null pointer"]
+/// pub struct NullError;
+///
+/// #[derive(EnumError)]
+/// pub enum MyError {
+///     IntoString(IntoStringError),
+///     Null(NullError),
+/// }
+/// pub fn ptr_to_string<c_char>(ptr: *const c_char) -> Result<String, MyError> {
+///    if ptr.is_null() { return Err(MyError::from(NullError)) };
+///    CStr::from_ptr(ptr).into_c_string().into_string()?
+/// }
+/// ```
 /// # Errors
 /// ```compile_fail
 /// #[derive(EnumError)]
