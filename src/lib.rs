@@ -3,7 +3,7 @@ mod enum_error;
 mod prelude;
 mod struct_error;
 
-use {enum_error::EnumError, prelude::*};
+use prelude::*;
 
 /// Saves you from typing ```impl std::error::Error for FooError {}```.
 /// # Examples
@@ -55,7 +55,8 @@ pub fn error(input: TokenStream) -> TokenStream {
 pub fn enum_error(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 
-    EnumError::from(&input).into_token_stream().into()
+    todo!()
+    //EnumError::from(&input).into_token_stream().into()
 }
 
 #[proc_macro_derive(StructError, attributes(format))]
