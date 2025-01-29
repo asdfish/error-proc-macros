@@ -1,10 +1,9 @@
 use {
     proc_macro::TokenStream,
     proc_macro_error::{Diagnostic, Level, proc_macro_error},
-    proc_macro2::Span,
     quote::quote,
-    std::{collections::HashMap, str::FromStr},
-    syn::{Data, DeriveInput, Expr, Ident, Lit, Meta, Path, parse_macro_input},
+    std::collections::HashMap,
+    syn::{Data, DeriveInput, Expr, Lit, Meta, parse_macro_input},
 };
 
 /// Saves you from typing ```impl std::error::Error for FooError {}```.
@@ -26,6 +25,10 @@ pub fn error(input: TokenStream) -> TokenStream {
 }
 
 /// Creates a error type from an enum.
+/// # Attributes
+/// | Attribute | Used on enum                                                                                               | On on variant                                                 |
+/// | --------- | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+/// | message   | Allows variants with no types where if they do not have a message attribute, they use this generic message | Makes the variant use this message if it does not have a type |
 /// # Example
 /// ```
 /// use std::ffi::{
@@ -58,7 +61,7 @@ pub fn error(input: TokenStream) -> TokenStream {
 /// #[derive(EnumError)]
 /// enum MyEnum { Foo = 0, Bar, Baz(u8) } // contains variants with no types
 /// ```
-#[proc_macro_derive(EnumError)]
+#[proc_macro_derive(EnumError, attributes(message))]
 #[proc_macro_error]
 pub fn enum_error(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
