@@ -1,7 +1,4 @@
-use crate::{
-    common::attributes_get_lit_str,
-    prelude::*,
-};
+use crate::{common::attributes_get_lit_str, prelude::*};
 
 struct DiscriminantVariant<'a> {
     ident: &'a Ident,
@@ -9,11 +6,7 @@ struct DiscriminantVariant<'a> {
     value: &'a Expr,
 }
 impl<'a> DiscriminantVariant<'a> {
-    pub fn new(
-        ident: &'a Ident,
-        format: &'a LitStr,
-        value: &'a Expr,
-    ) -> Self {
+    pub fn new(ident: &'a Ident, format: &'a LitStr, value: &'a Expr) -> Self {
         Self {
             ident,
             format,
@@ -53,7 +46,7 @@ impl<'a> UntypedVariant<'a> {
 enum EnumVariant<'a> {
     Discriminant(DiscriminantVariant<'a>),
     Typed(TypedVariant<'a>),
-    Untyped(UntypedVariant<'a>)
+    Untyped(UntypedVariant<'a>),
 }
 impl EnumVariant<'_> {
     fn ident(&self) -> &Ident {
@@ -81,16 +74,25 @@ impl EnumError<'_> {
     /// check that the error is valid
     fn assert(&self) {
         let mut unique_types: HashSet<&Type> = HashSet::new();
-        self.variants.iter().filter_map(|variant| {
-            if let EnumVariant::Typed(variant) = variant {
-                Some(variant)
-            } else {
-                None
-            }
-        })
+        self.variants
+            .iter()
+            .filter_map(|variant| {
+                if let EnumVariant::Typed(variant) = variant {
+                    Some(variant)
+                } else {
+                    None
+                }
+            })
             .for_each(|variant| {
                 if unique_types.contains(&variant.ty) {
-                    Diagnostic::new(Level::Error, String::from("enum errors should not contain duplicate types as it is redundant")).help(format!("remove variant `{}`", variant.ident)).abort();
+                    Diagnostic::new(
+                        Level::Error,
+                        String::from(
+                            "enum errors should not contain duplicate types as it is redundant",
+                        ),
+                    )
+                    .help(format!("remove variant `{}`", variant.ident))
+                    .abort();
                 } else {
                     unique_types.insert(variant.ty);
                 }
@@ -102,63 +104,71 @@ impl EnumError<'_> {
         // all valid instances of Self should be asserted before construction
         // self.assert_messages();
 
-        self.variants.iter().map(|variant| {
-            let variant_format = variant.format();
-            let variant_ident = variant.ident();
+        self.variants
+            .iter()
+            .map(|variant| {
+                let variant_format = variant.format();
+                let variant_ident = variant.ident();
 
-            if let Some(variant_format) = variant_format {
-                match variant {
-                    EnumVariant::Discriminant(variant) => {
-                        let variant_value = &variant.value;
+                if let Some(variant_format) = variant_format {
+                    match variant {
+                        EnumVariant::Discriminant(variant) => {
+                            let variant_value = &variant.value;
 
-                        quote! {
-                            Self::#variant_ident => format!(#variant_format, #variant_value)
+                            quote! {
+                                Self::#variant_ident => format!(#variant_format, #variant_value)
+                            }
                         }
-                    },
-                    EnumVariant::Typed(_) => {
-                        quote! {
-                            Self::#variant_ident(error) => format!(#variant_format, error),
+                        EnumVariant::Typed(_) => {
+                            quote! {
+                                Self::#variant_ident(error) => format!(#variant_format, error),
+                            }
                         }
-                    },
-                    EnumVariant::Untyped(variant) => {
-                        let message = variant.message;
+                        EnumVariant::Untyped(variant) => {
+                            let message = variant.message;
 
-                        quote! {
-                            Self::#variant_ident => format!(#variant_format, #message),
+                            quote! {
+                                Self::#variant_ident => format!(#variant_format, #message),
+                            }
                         }
-                    },
+                    }
+                } else {
+                    match variant {
+                        EnumVariant::Discriminant(variant) => {
+                            let variant_value = &variant.value;
+
+                            quote! {
+                                Self::#variant_ident => format!("{}", #variant_value)
+                            }
+                        }
+                        EnumVariant::Typed(_) => {
+                            quote! {
+                                Self::#variant_ident(error) => format!("{}", error),
+                            }
+                        }
+                        EnumVariant::Untyped(variant) => {
+                            let message = variant.message;
+
+                            quote! {
+                                Self::#variant_ident => format!("{}", #message),
+                            }
+                        }
+                    }
                 }
-            } else {
-                match variant {
-                    EnumVariant::Discriminant(variant) => {
-                        let variant_value = &variant.value;
-
-                        quote! {
-                            Self::#variant_ident => format!("{}", #variant_value)
-                        }
-                    },
-                    EnumVariant::Typed(_) => {
-                        quote! {
-                            Self::#variant_ident(error) => format!("{}", error),
-                        }
-                    },
-                    EnumVariant::Untyped(variant) => {
-                        let message = variant.message;
-
-                        quote! {
-                            Self::#variant_ident => format!("{}", #message),
-                        }
-                    },
-                }
-            }
-        }).collect()
+            })
+            .collect()
     }
     /// Creates a [Display][std::fmt::Display] implementation
     fn to_display_impl(&self) -> TokenStream2 {
         let self_ident = &self.ident;
 
         if self.variants.is_empty() {
-            Diagnostic::new(Level::Error, String::from("enums without variants cannot be constructed, making it pointless")).help(String::from("remove enum or add variants")).abort();
+            Diagnostic::new(
+                Level::Error,
+                String::from("enums without variants cannot be constructed, making it pointless"),
+            )
+            .help(String::from("remove enum or add variants"))
+            .abort();
         } else {
             let match_arms = self.to_display_match_arms();
 
@@ -193,10 +203,14 @@ impl EnumError<'_> {
     }
     /// Creates [From] implementations for all typed variants.
     fn to_from_impls(&self) -> TokenStream2 {
-        self.variants.iter().filter_map(|variant| {
-            let EnumVariant::Typed(variant) = variant else { return None };
-            Some(variant)
-        })
+        self.variants
+            .iter()
+            .filter_map(|variant| {
+                let EnumVariant::Typed(variant) = variant else {
+                    return None;
+                };
+                Some(variant)
+            })
             .map(|variant| {
                 let self_ident = &self.ident;
                 let variant_ident = &variant.ident;
@@ -210,7 +224,8 @@ impl EnumError<'_> {
                         }
                     }
                 }
-            }).collect()
+            })
+            .collect()
     }
 }
 impl<'a> From<&'a DeriveInput> for EnumError<'a> {
@@ -221,20 +236,39 @@ impl<'a> From<&'a DeriveInput> for EnumError<'a> {
             variants: Vec::new(),
         };
 
-        let Data::Enum(data) = &ast.data else { Diagnostic::new(Level::Error, String::from("EnumError can only be used on enums")).abort() };
-        output.variants = data.variants.iter().map(|variant| {
-            let ident = &variant.ident;
-            let ty = variant.fields.iter().map(|field| &field.ty).next();
+        let Data::Enum(data) = &ast.data else {
+            Diagnostic::new(
+                Level::Error,
+                String::from("EnumError can only be used on enums"),
+            )
+            .abort()
+        };
+        output.variants = data
+            .variants
+            .iter()
+            .map(|variant| {
+                let ident = &variant.ident;
+                let ty = variant.fields.iter().map(|field| &field.ty).next();
 
-            if variant.discriminant.is_none() {
-                match ty {
-                    Some(ty) => EnumVariant::Typed(TypedVariant::new(ident, ty)),
-                    None => EnumVariant::Untyped(UntypedVariant::new(ident, attributes_get_lit_str(&variant.attrs, "message").unwrap_or_else(|error| error.abort())))
+                if variant.discriminant.is_none() {
+                    match ty {
+                        Some(ty) => EnumVariant::Typed(TypedVariant::new(ident, ty)),
+                        None => EnumVariant::Untyped(UntypedVariant::new(
+                            ident,
+                            attributes_get_lit_str(&variant.attrs, "message")
+                                .unwrap_or_else(|error| error.abort()),
+                        )),
+                    }
+                } else {
+                    EnumVariant::Discriminant(DiscriminantVariant::new(
+                        ident,
+                        attributes_get_lit_str(&variant.attrs, "format")
+                            .unwrap_or_else(|error| error.abort()),
+                        variant.discriminant.as_ref().map(|(_, expr)| expr).unwrap(),
+                    ))
                 }
-            } else {
-                EnumVariant::Discriminant(DiscriminantVariant::new(ident, attributes_get_lit_str(&variant.attrs, "format").unwrap_or_else(|error| error.abort()), variant.discriminant.as_ref().map(|(_, expr)| expr).unwrap()))
-            }
-        }).collect();
+            })
+            .collect();
 
         output.assert();
         output
@@ -242,7 +276,9 @@ impl<'a> From<&'a DeriveInput> for EnumError<'a> {
 }
 impl ToTokens for EnumError<'_> {
     fn to_tokens(&self, output: &mut proc_macro2::TokenStream) {
-        [self.to_display_impl(), self.to_from_impls()].into_iter().for_each(|tokens| output.extend(tokens));
+        [self.to_display_impl(), self.to_from_impls()]
+            .into_iter()
+            .for_each(|tokens| output.extend(tokens));
         // [self.to_display_impl(), self.to_from_impls()].into_iter().for_each(|tokens| { println!("{}", tokens);output.extend(tokens)});
     }
 }

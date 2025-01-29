@@ -3,10 +3,7 @@ mod enum_error;
 mod prelude;
 mod struct_error;
 
-use {
-    prelude::*,
-    enum_error::EnumError,
-};
+use {enum_error::EnumError, prelude::*};
 
 /// Saves you from typing ```impl std::error::Error for FooError {}```.
 /// # Examples
