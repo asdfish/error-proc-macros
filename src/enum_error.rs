@@ -16,7 +16,7 @@ fn get_required_format<'a>(attributes: &'a [Attribute], ident: &Ident) -> &'a Li
 pub enum EnumVariant<'a> {
     AnonymousStruct {
         ident: &'a Ident,
-        fields: Vec<(&'a Ident, &'a Type)>,
+        fields: Vec<(&'a Ident)>,
         format: &'a LitStr,
     },
     Discriminant {
@@ -43,10 +43,8 @@ impl EnumVariant<'_> {
     pub fn to_display_match_arm(&self) -> TokenStream2 {
         match self {
             Self::AnonymousStruct { ident, fields, format } => {
-                let field_idents = fields.iter().map(|(ident, _)| ident).collect::<Vec<_>>();
-
                 quote! {
-                    Self::#ident { #(#field_idents,)* } => format!(#format),
+                    Self::#ident { #(#fields,)* } => format!(#format),
                 }
             },
             Self::Discriminant { discriminant, ident, format } => {
@@ -119,7 +117,7 @@ impl<'a> From<&'a Variant> for EnumVariant<'a> {
             Fields::Named(fields) => {
                 Self::AnonymousStruct {
                     ident: &variant.ident,
-                    fields: fields.named.iter().map(|field| (field.ident.as_ref().unwrap(), &field.ty)).collect(),
+                    fields: fields.named.iter().map(|field| field.ident.as_ref().unwrap()).collect(),
                     format: get_required_format(&variant.attrs, &variant.ident),
                 }
             },
