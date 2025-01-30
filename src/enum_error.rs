@@ -16,7 +16,7 @@ fn get_required_format<'a>(attributes: &'a [Attribute], ident: &Ident) -> &'a Li
 pub enum EnumVariant<'a> {
     AnonymousStruct {
         ident: &'a Ident,
-        fields: Vec<(&'a Ident)>,
+        fields: Vec<&'a Ident>,
         format: &'a LitStr,
     },
     Discriminant {
@@ -32,7 +32,7 @@ pub enum EnumVariant<'a> {
     Tuple {
         ident: &'a Ident,
         format: &'a LitStr,
-        types: Vec<&'a Type>,
+        len: usize,
     },
     Unit {
         ident: &'a Ident,
@@ -74,9 +74,9 @@ impl EnumVariant<'_> {
             Self::Tuple {
                 ident,
                 format,
-                types,
+                len,
             } => {
-                let args = types.iter().enumerate().map(|(i, _)| format!("arg_{i}").parse().unwrap()).collect::<Vec<TokenStream2>>();
+                let args = (0..*len).map(|i| format!("arg_{i}").parse().unwrap()).collect::<Vec<TokenStream2>>();
 
                 quote! {
                     Self::#ident(#(#args),*) => format!(#format),
@@ -132,7 +132,7 @@ impl<'a> From<&'a Variant> for EnumVariant<'a> {
                     Self::Tuple {
                         ident: &variant.ident,
                         format: get_required_format(&variant.attrs, &variant.ident),
-                        types: fields.unnamed.iter().map(|field| &field.ty).collect(),
+                        len: fields.unnamed.len(),
                     }
                 }
             },
