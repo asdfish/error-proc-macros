@@ -180,13 +180,13 @@ impl EnumError<'_> {
         }
     }
     fn to_from_impls(&self) -> TokenStream2 {
-        self.variants.iter().flat_map(|variant| variant.to_from_impl(&self.ident)).collect()
+        self.variants.iter().flat_map(|variant| variant.to_from_impl(self.ident)).collect()
     }
 }
 impl<'a> From<&'a DeriveInput> for EnumError<'a> {
     fn from(input: &'a DeriveInput) -> Self {
         let Data::Enum(data) = &input.data else { Diagnostic::new(Level::Error, String::from("`EnumError` only works on enum")).help(String::from("remove")).abort() };
-        let variants = data.variants.iter().map(|variant| EnumVariant::from(variant)).collect();
+        let variants = data.variants.iter().map(EnumVariant::from).collect();
 
         Self {
             ident: &input.ident,
