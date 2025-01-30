@@ -3,7 +3,10 @@ mod enum_error;
 mod prelude;
 mod struct_error;
 
-use prelude::*;
+use {
+    enum_error::EnumError,
+    prelude::*,
+};
 
 /// Saves you from typing ```impl std::error::Error for FooError {}```.
 /// # Examples
@@ -25,11 +28,6 @@ pub fn error(input: TokenStream) -> TokenStream {
 }
 
 /// Creates a error type from an enum.
-/// # Attributes
-/// | Attribute | Used on enum         | Used on variant                                               |
-/// | --------- | -------------------- | ------------------------------------------------------------- |
-/// | format    | Formats all variants | Formats this variant                                          |
-/// | message   | Does nothing         | Makes the variant use this message if it does not have a type |
 /// # Example
 /// ```
 /// use std::ffi::{
@@ -50,13 +48,12 @@ pub fn error(input: TokenStream) -> TokenStream {
 ///    CStr::from_ptr(ptr).into_c_string().into_string()?
 /// }
 /// ```
-#[proc_macro_derive(EnumError, attributes(format, message))]
+#[proc_macro_derive(EnumError, attributes(format))]
 #[proc_macro_error]
 pub fn enum_error(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 
-    todo!()
-    //EnumError::from(&input).into_token_stream().into()
+    EnumError::from(&input).into_token_stream().into()
 }
 
 #[proc_macro_derive(StructError, attributes(format))]

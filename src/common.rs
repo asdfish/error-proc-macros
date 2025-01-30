@@ -1,6 +1,6 @@
 //! Shared functions
 
-use {crate::prelude::*, syn::Attribute};
+use crate::prelude::*;
 
 pub fn attributes_get_lit_str<'a>(
     attributes: &'a [Attribute],
