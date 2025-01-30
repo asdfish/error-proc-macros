@@ -106,11 +106,13 @@ impl EnumVariant<'_> {
 impl<'a> From<&'a Variant> for EnumVariant<'a> {
     fn from(variant: &'a Variant) -> Self {
         if let Some(discriminant) = &variant.discriminant {
-            return Self::Discriminant {
-                discriminant: &discriminant.1,
-                format: attributes_get_lit_str(&variant.attrs, "format").ok(),
-                ident: &variant.ident,
-            };
+            if variant.fields == Fields::Unit {
+                return Self::Discriminant {
+                    discriminant: &discriminant.1,
+                    format: attributes_get_lit_str(&variant.attrs, "format").ok(),
+                    ident: &variant.ident,
+                };
+            }
         }
 
         match &variant.fields {
