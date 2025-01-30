@@ -14,96 +14,26 @@ fn get_required_format<'a>(attributes: &'a [Attribute], ident: &Ident) -> &'a Li
 }
 
 pub enum EnumVariant<'a> {
-    /**
-    Enum variants with an anonymous field
-    ```
-    enum MyEnum {
-         MyField { x: u8, y: i8 },
-    }
-    ```
-    # Formatting
-    Formatting is required as display is not implemented for anonymous structs.
-    The arguments for the [format] macro become the names of the fields.
-    ```
-    enum MyEnum {
-         #[format = "x: {x}, y: {y}"]
-         MyField { x: u8, y: u8 },
-    }
-    let my_enum = MyEnum::MyField { x: 10, y: 10 };
-    assert_eq!(String::from("x: 10, y: 10"), my_enum.to_string());
-    ```*/
     AnonymousStruct {
         ident: &'a Ident,
         fields: Vec<(&'a Ident, &'a Type)>,
         format: &'a LitStr,
     },
-    /**
-    Enum variants with custom set discriminants.
-    ```
-    enum MyEnum {
-         MyField = 10,
-    }
-    ```
-    # Formattting
-    Formatting is required because the discriminant has no meaningful message. */
     Discriminant {
         discriminant: &'a Expr,
-        format: &'a LitStr,
+        format: Option<&'a LitStr>,
         ident: &'a Ident,
     },
-    /**
-    Tuple variant with a single type
-    ```
-    enum MyEnum {
-        MyField(i8),
-    }
-    ```
-    # Formatting
-    If the variant does not have a format, you can only have a singular instance of its type.
-    This is so that the type can can implement [From] for the type.
-    If it does have a format, it will not have a [From] implementation.
-
-    The reason for this is that error types can only have a singular message, so having duplicates would not make sense, and implementing [From] would allow for the try operator.
-     */
     SingleType {
         ident: &'a Ident,
         format: Option<&'a LitStr>,
         ty: &'a Type,
     },
-    /**
-    Tuple variant with multiple types
-    It is recommended to use this over something like ```enum MyEnum { Foo((i8, i8)) }``` as tuples do not have formatting.
-    ```
-    enum MyEnum {
-         MyField(i8, i8),
-    }
-    ```
-    # Formatting
-    Formatting is required.
-    Numbers correspond to the type index and arg_ eg.
-    ```
-    enum MyEnum {
-         #[format = "{arg_1}{arg_0}"]
-         MyField(i8, i8)
-    }
-    assert_eq!(String::from("010"), format!("{}", MyEnum::MyField(10, 0)));
-    ```
-    */
     Tuple {
         ident: &'a Ident,
         format: &'a LitStr,
         types: Vec<&'a Type>,
     },
-    /**
-    Enum variants with no values associated with it.
-    ```
-    enum MyEnum {
-         MyField,
-    }
-    ```
-    # Formatting
-    Formatting is required as a unit enum has no text associated with it.
-    */
     Unit {
         ident: &'a Ident,
         format: &'a LitStr,
@@ -120,8 +50,13 @@ impl EnumVariant<'_> {
                 }
             },
             Self::Discriminant { discriminant, ident, format } => {
-                quote! {
-                    Self::#ident => format!(#format, #discriminant),
+                match format {
+                    Some(format) => quote! {
+                        Self::#ident => format!(#format, #discriminant),
+                    },
+                    None => quote! {
+                        Self::#ident => format!("{}", #discriminant),
+                    },
                 }
             },
             Self::SingleType { ident, format, .. } => {
@@ -173,7 +108,7 @@ impl<'a> From<&'a Variant> for EnumVariant<'a> {
         if let Some(discriminant) = &variant.discriminant {
             return Self::Discriminant {
                 discriminant: &discriminant.1,
-                format: get_required_format(&variant.attrs, &variant.ident),
+                format: attributes_get_lit_str(&variant.attrs, "format").ok(),
                 ident: &variant.ident,
             };
         }
