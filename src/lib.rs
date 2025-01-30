@@ -5,6 +5,7 @@ mod struct_error;
 
 use {
     enum_error::EnumError,
+    struct_error::StructError,
     prelude::*,
 };
 
@@ -60,84 +61,6 @@ pub fn enum_error(input: TokenStream) -> TokenStream {
 #[proc_macro_error]
 pub fn struct_error(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
-    let ident = &input.ident;
-    let Data::Struct(data) = input.data else {
-        Diagnostic::new(
-            Level::Error,
-            format!("StructError cannot be called on non struct `{}`", ident),
-        )
-        .abort()
-    };
 
-    let format = input
-        .attrs
-        .iter()
-        .map(|attr| &attr.meta)
-        .filter(|meta| meta.path().is_ident("format"))
-        .map(|meta| {
-            let Meta::NameValue(meta) = meta else {
-                Diagnostic::new(
-                    Level::Error,
-                    String::from("the `format` attribute can only be used as a name value pair"),
-                )
-                .help(String::from("change to #[format = \"...\"]"))
-                .abort()
-            };
-            meta
-        })
-        .next()
-        .map(|meta| {
-            let diagnostic = Diagnostic::new(
-                Level::Error,
-                String::from("the `format` attribute only accept string literals"),
-            )
-            .help(String::from("change to `#[format = \"...\"]`"));
-
-            let Expr::Lit(value) = &meta.value else {
-                diagnostic.abort()
-            };
-            let Lit::Str(value) = &value.lit else {
-                diagnostic.abort()
-            };
-
-            value
-        })
-        .unwrap_or_else(|| {
-            Diagnostic::new(
-                Level::Error,
-                String::from("a derived StructError must have a `format` attribute"),
-            )
-            .abort()
-        });
-
-    let field_declarations = data
-        .fields
-        .iter()
-        .map(|field| {
-            field.ident.as_ref().unwrap_or_else(|| {
-                Diagnostic::new(
-                    Level::Error,
-                    String::from("`StructError` can only be used on structs with named fields"),
-                )
-                .abort()
-            })
-        })
-        .map(|ident| {
-            quote! {
-                let #ident = &self.#ident;
-            }
-        })
-        .collect::<TokenStream2>();
-
-    quote! {
-        #[automatically_derived]
-        impl std::fmt::Display for #ident {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-                #field_declarations
-
-                write!(f, #format)
-            }
-        }
-    }
-    .into()
+    StructError::from(&input).into_token_stream().into()
 }

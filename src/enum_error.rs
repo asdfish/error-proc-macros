@@ -1,4 +1,4 @@
-use {crate::{common::attributes_get_lit_str, prelude::*}, syn::DataEnum};
+use crate::{common::attributes_get_lit_str, prelude::*};
 
 fn get_required_format<'a>(attributes: &'a [Attribute], ident: &Ident) -> &'a LitStr {
     attributes_get_lit_str(attributes, "format").unwrap_or_else(|err| {

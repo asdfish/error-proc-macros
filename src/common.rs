@@ -29,28 +29,11 @@ pub enum AttributesGetLitStrError<'a> {
     NotStringLiteral(&'a str),
 }
 impl AttributesGetLitStrError<'_> {
-    pub fn abort(&self) -> ! {
-        let mut error = Diagnostic::new(Level::Error, self.to_description());
-        if let Some(help) = self.to_help() {
-            error = error.help(help);
-        }
-
-        error.abort();
-    }
-
     pub fn to_description(&self) -> String {
         match self {
             Self::NotFound(attribute) => format!("attribute `{}` was not found", attribute),
             Self::NotStringLiteral(attribute) => {
                 format!("attribute `{}` only accepts string literals", attribute)
-            }
-        }
-    }
-    pub fn to_help(&self) -> Option<String> {
-        match self {
-            Self::NotFound(attribute) => Some(format!("add #[{} = \"...\"]", attribute)),
-            Self::NotStringLiteral(attribute) => {
-                Some(format!("change to `#[{} = \"...\"]`", attribute))
             }
         }
     }
