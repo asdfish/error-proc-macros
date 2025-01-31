@@ -22,9 +22,10 @@ use {
 pub fn error(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let ident = &input.ident;
+    let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
     quote! {
-        impl std::error::Error for #ident {}
+        impl #impl_generics std::error::Error for #ident #ty_generics #where_clause {}
     }
     .into()
 }
