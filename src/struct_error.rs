@@ -1,4 +1,7 @@
-use crate::{common::attrs_get_lit_str, prelude::*};
+use crate::{
+    common::{attrs_get_lit_str, display_field},
+    prelude::*,
+};
 
 pub struct StructError<'a> {
     ident: &'a Ident,
@@ -44,10 +47,10 @@ impl ToTokens for StructError<'_> {
 }
 
 pub enum StructErrorVariant<'a> {
-    Named(Vec<&'a Ident>),
+    Named(Vec<(Option<&'a LitStr>, &'a Ident)>),
     SingleUnnamed,
     Unit,
-    Unnamed { len: usize },
+    Unnamed(Vec<Option<&'a LitStr>>),
 }
 impl StructErrorVariant<'_> {
     /// Creates a display implementation
@@ -61,11 +64,31 @@ impl StructErrorVariant<'_> {
 
         match self {
             Self::Named(fields) => {
+                let declarations = fields
+                    .iter()
+                    .map(|(display, field)| {
+                        (
+                            display,
+                            field,
+                            quote! {
+                                self.#field
+                            },
+                        )
+                    })
+                    .map(|(display, field, self_field)| {
+                        let display = display_field(display, &self_field);
+
+                        quote! {
+                            let #field = #display;
+                        }
+                    })
+                    .collect::<TokenStream2>();
+
                 quote! {
                     #[automatically_derived]
                     impl #impl_generics std::fmt::Display for #self_ident #ty_generics #where_clause {
                         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-                            #(let #fields = self.#fields;)*
+                            #declarations
 
                             write!(f, #self_format)
                         }
@@ -92,21 +115,35 @@ impl StructErrorVariant<'_> {
                     }
                 }
             }
-            Self::Unnamed { len } => {
-                let (arg_idents, self_idents): (Vec<TokenStream2>, Vec<TokenStream2>) = (0..*len)
-                    .map(|i| {
+            Self::Unnamed(displays) => {
+                let definitions = displays
+                    .iter()
+                    .enumerate()
+                    .map(|(i, display)| {
                         (
-                            format!("arg_{}", i).parse().unwrap(),
-                            format!("self.{}", i).parse().unwrap(),
+                            display,
+                            format!("arg_{i}").parse().unwrap_or_else(|error| {
+                                syn::Error::from(error).into_compile_error()
+                            }),
+                            format!("self.{i}").parse().unwrap_or_else(|error| {
+                                syn::Error::from(error).into_compile_error()
+                            }),
                         )
                     })
-                    .unzip();
+                    .map(|(display, arg_var, self_var)| {
+                        let display = display_field(display, &self_var);
+                        quote! {
+                            let #arg_var = #display;
+                        }
+                    })
+                    .collect::<TokenStream2>();
 
                 quote! {
                     #[automatically_derived]
                     impl #impl_generics std::fmt::Display for #self_ident #ty_generics #where_clause {
                         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-                            #(let #arg_idents = &#self_idents;)*
+                            #definitions
+
                             write!(f, #self_format)
                         }
                     }
@@ -118,17 +155,29 @@ impl StructErrorVariant<'_> {
 impl<'a> From<&'a Fields> for StructErrorVariant<'a> {
     fn from(fields: &'a Fields) -> Self {
         match fields {
-            // flat map to avoid panic but may end up with unnamed field
-            Fields::Named(fields) => {
-                Self::Named(fields.named.iter().flat_map(|field| &field.ident).collect())
-            }
+            Fields::Named(fields) => Self::Named(
+                fields
+                    .named
+                    .iter()
+                    .map(|field| {
+                        (
+                            attrs_get_lit_str(&field.attrs, "display").ok(),
+                            field.ident.as_ref().unwrap(),
+                        )
+                    })
+                    .collect(),
+            ),
             Fields::Unnamed(fields) => {
                 if fields.unnamed.len() == 1 {
                     Self::SingleUnnamed
                 } else {
-                    Self::Unnamed {
-                        len: fields.unnamed.len(),
-                    }
+                    Self::Unnamed(
+                        fields
+                            .unnamed
+                            .iter()
+                            .map(|field| attrs_get_lit_str(&field.attrs, "display").ok())
+                            .collect(),
+                    )
                 }
             }
             Fields::Unit => Self::Unit,

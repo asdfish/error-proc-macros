@@ -1,5 +1,9 @@
-use crate::{common::attrs_get_lit_str, prelude::*};
+use crate::{
+    common::{attrs_get_lit_str, display_field},
+    prelude::*,
+};
 
+/// Gets the `format` attribute but panics if not found.
 fn get_required_format<'a>(attrs: &'a [Attribute], ident: &Ident) -> &'a LitStr {
     attrs_get_lit_str(attrs, "format").unwrap_or_else(|err| {
         Diagnostic::new(
@@ -12,23 +16,8 @@ fn get_required_format<'a>(attrs: &'a [Attribute], ident: &Ident) -> &'a LitStr 
         .abort()
     })
 }
-fn display_field<T: ToTokens + ?Sized>(display: &Option<&LitStr>, variable: &T) -> TokenStream2 {
-    match display {
-        Some(display) => {
-            let conversion = display
-                .parse()
-                .unwrap_or_else(|err| err.into_compile_error());
 
-            quote! {
-                (#conversion)(#variable)
-            }
-        }
-        None => quote! {
-            #variable
-        },
-    }
-}
-
+/// The possible enum variants.
 pub enum EnumVariant<'a> {
     AnonymousStruct {
         ident: &'a Ident,

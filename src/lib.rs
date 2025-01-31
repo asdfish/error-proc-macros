@@ -26,36 +26,42 @@ pub fn error(input: TokenStream) -> TokenStream {
     .into()
 }
 
-/// Creates a error type from an enum.
-/// # Attributes
-/// | Attribute | Description |
-/// | --------- | ----------- |
-/// | display | A way for fields that do not implement `Display` to still be formatted. The string gets appended to the end of the field that is to be formatted. |
-/// | format | Formats the specified field. If format is used on the enum itself, it formats all fields. |
-/// # Example
-/// ```
-/// use {
-///     error_proc_macros::EnumError,
-///     std::{
-///         ffi::{
-///           c_char,
-///           CStr,
-///         },
-///         str::Utf8Error,
-///     },
-/// };
-///
-/// #[derive(EnumError)]
-/// pub enum PtrToStrError {
-///     #[format = "unexpected null pointer"]
-///     NullError,
-///     Utf8Error(Utf8Error),
-/// }
-/// pub fn ptr_to_string(ptr: &*const c_char) -> Result<&str, PtrToStrError> {
-///     if ptr.is_null() { return Err(PtrToStrError::NullError) };
-///     Ok(unsafe { CStr::from_ptr(*ptr).to_str()? })
-/// }
-/// ```
+/**
+Creates an error type from an enum.
+
+# Attributes
+## `display`
+Insert a closure to give a field formatting.
+```
+use {
+    error_proc_macros::EnumError,
+    std::path::Path,
+};
+
+#[derive(EnumError)]
+enum PathError<'a> {
+    #[format = "path `{}` does not exist"]
+    #[display = "|path: &'a Path| path.display()"]
+    NonExistant(&'a Path),
+}
+
+assert_eq!(
+    PathError::NonExistant(Path::new("foo.txt")).to_string(),
+    String::from("path `foo.txt` does not exist")
+);
+```
+
+## `format`
+Applies formatting.
+
+### Argument access
+| Variant Type   | Argument access |
+| -------------- | --------------- |
+| Single tuple   | `{}`            |
+| Multiple tuple | `arg_{i}`       |
+| Struct-like    | field name      |
+| Unit           | inaccessable    |
+*/
 #[proc_macro_derive(EnumError, attributes(display, format))]
 #[proc_macro_error]
 pub fn enum_error(input: TokenStream) -> TokenStream {
@@ -64,7 +70,34 @@ pub fn enum_error(input: TokenStream) -> TokenStream {
     EnumError::from(&input).into_token_stream().into()
 }
 
-#[proc_macro_derive(StructError, attributes(format))]
+/**
+Creates an error type from an struct.
+
+# Attributes
+
+# `format`
+Format can only be used on the struct itself.
+## Argument access
+| Struct Type    | Argument access |
+| -------------- | --------------- |
+| Single tuple   | `{}`            |
+| Multiple tuple | `arg_{i}`       |
+| Named fields   | field name      |
+| Unit struct    | inaccessable    |
+
+## Examples
+```
+use error_proc_macros::StructError;
+
+#[derive(StructError)]
+#[format = "{foo}"]
+struct MyError {
+    foo: i8,
+}
+assert_eq!(MyError { foo: 10 }.to_string(), 10.to_string());
+```
+ */
+#[proc_macro_derive(StructError, attributes(display, format))]
 #[proc_macro_error]
 pub fn struct_error(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
