@@ -3,11 +3,7 @@ mod enum_error;
 mod prelude;
 mod struct_error;
 
-use {
-    enum_error::EnumError,
-    struct_error::StructError,
-    prelude::*,
-};
+use {enum_error::EnumError, prelude::*, struct_error::StructError};
 
 /// Saves you from typing ```impl std::error::Error for FooError {}```.
 /// # Examples
@@ -31,6 +27,11 @@ pub fn error(input: TokenStream) -> TokenStream {
 }
 
 /// Creates a error type from an enum.
+/// # Attributes
+/// | Attribute | Description |
+/// | --------- | ----------- |
+/// | display | A way for fields that do not implement `Display` to still be formatted. The string gets appended to the end of the field that is to be formatted. |
+/// | format | Formats the specified field. If format is used on the enum itself, it formats all fields. |
 /// # Example
 /// ```
 /// use {
@@ -55,7 +56,7 @@ pub fn error(input: TokenStream) -> TokenStream {
 ///     Ok(unsafe { CStr::from_ptr(*ptr).to_str()? })
 /// }
 /// ```
-#[proc_macro_derive(EnumError, attributes(format))]
+#[proc_macro_derive(EnumError, attributes(display, format))]
 #[proc_macro_error]
 pub fn enum_error(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);

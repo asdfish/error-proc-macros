@@ -5,6 +5,7 @@ mod tests {
         EnumError,
         StructError,
     };
+
     #[test]
     fn error() {
         use std::boxed::Box;
@@ -16,17 +17,35 @@ mod tests {
         let _: Box<dyn std::error::Error> = Box::new(TestError);
         assert!(true);
     }
-
     #[test]
-    fn enum_lifetimes() {
-        #[derive(EnumError)]
-        enum TestError<'a> {
-            text(&'a str),
-        }
+    fn error_generics() {
+        #[derive(Debug, Error, StructError)]
+        #[format = "{text}"]
+        pub struct TestError<'a> { text: &'a str, }
 
-        assert!(true);
+        assert_eq!(TestError { text: "foo" }.to_string(), String::from("foo"));
     }
 
+    #[test]
+    fn enum_displays() {
+        use std::path::Path;
+        #[derive(EnumError)]
+        enum PathError<'a> {
+            #[display = "|path: &'a Path| path.display()"]
+            NonExistant(
+                &'a Path
+            )
+        }
+    }
+    #[test]
+    fn enum_generics() {
+        #[derive(EnumError)]
+        enum TestError<'a> {
+            Text(&'a str),
+        }
+
+        assert_eq!(TestError::Text("foo").to_string(), String::from("foo"));
+    }
     #[test]
     fn enum_top_level_format() {
         #[derive(EnumError)]
@@ -81,11 +100,12 @@ mod tests {
     }
 
     #[test]
-    fn struct_lifetimes() {
+    fn struct_generics() {
         #[derive(StructError)]
-        #[format = "placeholder"]
+        #[format = "{text}"]
         struct FooError<'a> { text: &'a str, }
-        assert!(true);
+
+        assert_eq!(FooError { text: "foo" }.to_string(), String::from("foo"))
     }
     #[test]
     fn struct_named() {
