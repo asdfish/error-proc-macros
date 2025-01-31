@@ -3,105 +3,115 @@ use crate::{
     prelude::*,
 };
 
-pub enum StructError<'a> {
-    Named {
-        ident: &'a Ident,
-        format: &'a LitStr,
-        fields: Vec<&'a Ident>,
-    },
-    SingleUnnamed {
-        ident: &'a Ident,
-        format: &'a LitStr,
-    },
-    Unit {
-        ident: &'a Ident,
-        format: &'a LitStr,
-    },
-    Unnamed {
-        ident: &'a Ident,
-        format: &'a LitStr,
-        len: usize,
-    },
+pub struct StructError<'a> {
+    ident: &'a Ident,
+    format: &'a LitStr,
+    generics: &'a Generics,
+    variant: StructErrorVariant<'a>,
 }
 impl<'a> From<&'a DeriveInput> for StructError<'a> {
     fn from(input: &'a DeriveInput) -> Self {
-        let ident = &input.ident;
-        let format = attributes_get_lit_str(&input.attrs, "format").unwrap_or_else(|_| Diagnostic::new(Level::Error, String::from("the `format` attribute is required for the `StructError` derive macro")).help(String::from("add `#[format = \"...\"]`")).abort());
-
         let Data::Struct(data) = &input.data else {
-            Diagnostic::new(Level::Error, String::from("the `StructError` macro may only be used on structs")).help(String::from("remove")).abort()
+            Diagnostic::new(Level::Error, String::from("the `StructError` only works on structs"))
+                .help(String::from("remove"))
+                .abort()
         };
 
-        match &data.fields {
-            Fields::Named(fields) => {
-                Self::Named {
-                    ident,
-                    format,
-                    fields: fields.named.iter().map(|field| field.ident.as_ref().unwrap()).collect(),
-                }
-            },
-            Fields::Unnamed(fields) => {
-                if fields.unnamed.len() == 1 {
-                    Self::SingleUnnamed {
-                        ident,
-                        format,
-                    }
-                } else {
-                    Self::Unnamed {
-                        ident,
-                        format,
-                        len: fields.unnamed.len(),
-                    }
-                }
-            },
-            Fields::Unit => Self::Unit {
-                ident,
-                format,
-            },
+        Self {
+            ident: &input.ident,
+            format: attributes_get_lit_str(&input.attrs, "format").unwrap_or_else(|_| {
+                Diagnostic::new(Level::Error, String::from("failed to get required attribute `format` for macro `StructError`"))
+                    .help(String::from("add `#[format = \"...\"]`"))
+                    .abort()
+            }),
+            generics: &input.generics,
+            variant: StructErrorVariant::from(&data.fields),
         }
     }
 }
 impl ToTokens for StructError<'_> {
-   fn to_tokens(&self, output: &mut TokenStream2) {
-        output.extend(match self {
-            Self::Named { ident, fields, format } => quote! {
-                #[automatically_derived]
-                impl std::fmt::Display for #ident {
-                    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-                        #(let #fields = self.#fields;)*
-                        write!(f, #format)
-                    }
-                }
-            },
-            Self::SingleUnnamed { ident, format, .. } => quote! {
-                #[automatically_derived]
-                impl std::fmt::Display for #ident {
-                    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-                        write!(f, #format, self.0)
-                    }
-                }
-            },
-            Self::Unit { ident, format } => quote! {
-                #[automatically_derived]
-                impl std::fmt::Display for #ident {
-                    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-                        write!(f, #format)
-                    }
-                }
-            },
-            Self::Unnamed { ident, format, len } => {
-                let (variable_names, fields): (Vec<TokenStream2>, Vec<TokenStream2>) = (0..*len).map(|i| (format!("arg_{}", i).parse().unwrap(), format!("self.{}", i).parse().unwrap())).unzip();
+    fn to_tokens(&self, output: &mut TokenStream2) {
+        output.extend(self.variant.to_display_impl(self.ident, self.generics, self.format));
+    }
+}
 
+pub enum StructErrorVariant<'a> {
+    Named(Vec<&'a Ident>),
+    SingleUnnamed,
+    Unit,
+    Unnamed { len: usize },
+}
+impl StructErrorVariant<'_> {
+    /// Creates a display implementation
+    pub fn to_display_impl(&self,
+        self_ident: &Ident,
+        self_generics: &Generics,
+        self_format: &LitStr
+    ) -> TokenStream2 {
+        let (impl_generics, ty_generics, where_clause) = self_generics.split_for_impl();
+
+        match self {
+            Self::Named(fields) => {
                 quote! {
                     #[automatically_derived]
-                    impl std::fmt::Display for #ident {
+                    impl #impl_generics std::fmt::Display for #self_ident #ty_generics #where_clause {
                         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-                            #(let #variable_names = #fields;)*
-                            write!(f, #format)
+                            #(let #fields = self.#fields;)*
+
+                            write!(f, #self_format)
                         }
                     }
                 }
+            },
+            Self::SingleUnnamed => {
+                quote! {
+                    #[automatically_derived]
+                    impl #impl_generics std::fmt::Display for #self_ident #ty_generics #where_clause {
+                        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+                            write!(f, #self_format, self.0)
+                        }
+                    }
+                }
+            },
+            Self::Unit => {
+                quote! {
+                    #[automatically_derived]
+                    impl #impl_generics std::fmt::Display for #self_ident #ty_generics #where_clause {
+                        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+                            write!(f, #self_format)
+                        }
+                    }
+                }
+            },
+            Self::Unnamed { len } => {
+                let (arg_idents, self_idents): (Vec<TokenStream2>, Vec<TokenStream2>) = (0..*len)
+                    .map(|i| (format!("arg_{}", i).parse().unwrap(), format!("self.{}", i).parse().unwrap()))
+                    .unzip();
+
+                quote! {
+                    #[automatically_derived]
+                    impl #impl_generics std::fmt::Display for #self_ident #ty_generics #where_clause {
+                        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+                            #(let #arg_idents = &#self_idents;)*
+                            write!(f, #self_format)
+                        }
+                    }   
+                }
             }
-        });
+        }
+    }
+}
+impl<'a> From<&'a Fields> for StructErrorVariant<'a> {
+    fn from(fields: &'a Fields) -> Self {
+        match fields {
+            // flat map to avoid panic but may end up with unnamed field
+            Fields::Named(fields) => Self::Named(fields.named.iter().flat_map(|field| &field.ident).collect()),
+            Fields::Unnamed(fields) => if fields.unnamed.len() == 1 {
+                Self::SingleUnnamed
+            } else {
+                Self::Unnamed { len: fields.unnamed.len() }
+            },
+            Fields::Unit => Self::Unit,
+        }
     }
 }

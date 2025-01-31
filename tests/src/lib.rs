@@ -18,6 +18,16 @@ mod tests {
     }
 
     #[test]
+    fn enum_lifetimes() {
+        #[derive(EnumError)]
+        enum TestError<'a> {
+            text(&'a str),
+        }
+
+        assert!(true);
+    }
+
+    #[test]
     fn enum_top_level_format() {
         #[derive(EnumError)]
         #[format = "an error occured: {}"]
@@ -70,6 +80,13 @@ mod tests {
         assert_eq!(String::from("unexpected null pointer"), TestError::NullError.to_string());
     }
 
+    #[test]
+    fn struct_lifetimes() {
+        #[derive(StructError)]
+        #[format = "placeholder"]
+        struct FooError<'a> { text: &'a str, }
+        assert!(true);
+    }
     #[test]
     fn struct_named() {
         #[derive(StructError)]

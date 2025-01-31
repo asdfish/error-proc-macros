@@ -87,13 +87,15 @@ impl EnumVariant<'_> {
             },
         }
     }
-    pub fn to_from_impl(&self, onto: &Ident) -> Option<TokenStream2> {
+    pub fn to_from_impl(&self, onto: &Ident, generics: &Generics) -> Option<TokenStream2> {
         let Self::SingleType { ident, ty, format } = self else { return None };
         if format.is_some() { return None; }
 
+        let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+
         Some(quote! {
             #[automatically_derived]
-            impl From<#ty> for #onto {
+            impl #impl_generics From<#ty> for #onto #ty_generics #where_clause{
                 fn from(error: #ty) -> Self {
                     Self::#ident(error)
                 }
@@ -149,17 +151,19 @@ impl<'a> From<&'a Variant> for EnumVariant<'a> {
 pub struct EnumError<'a> {
     ident: &'a Ident,
     format: Option<&'a LitStr>,
+    generics: &'a Generics,
     variants: Vec<EnumVariant<'a>>,
 }
 impl EnumError<'_> {
     fn to_display_impl(&self) -> TokenStream2 {
         let ident = &self.ident;
+        let (impl_generics, ty_generics, where_clause) = self.generics.split_for_impl();
         let match_arms = self.variants.iter().map(|variant| variant.to_display_match_arm()).collect::<TokenStream2>();
 
         match self.format {
             Some(format) => quote! {
                 #[automatically_derived]
-                impl std::fmt::Display for #ident {
+                impl #impl_generics std::fmt::Display for #ident #ty_generics #where_clause {
                     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
                         write!(f, #format, match self {
                             #match_arms
@@ -169,7 +173,7 @@ impl EnumError<'_> {
             },
             None => quote! {
                 #[automatically_derived]
-                impl std::fmt::Display for #ident {
+                impl #impl_generics std::fmt::Display for #ident #ty_generics #where_clause {
                     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
                         write!(f, "{}", match self {
                             #match_arms
@@ -180,7 +184,7 @@ impl EnumError<'_> {
         }
     }
     fn to_from_impls(&self) -> TokenStream2 {
-        self.variants.iter().flat_map(|variant| variant.to_from_impl(self.ident)).collect()
+        self.variants.iter().flat_map(|variant| variant.to_from_impl(self.ident, self.generics)).collect()
     }
 }
 impl<'a> From<&'a DeriveInput> for EnumError<'a> {
@@ -191,6 +195,7 @@ impl<'a> From<&'a DeriveInput> for EnumError<'a> {
         Self {
             ident: &input.ident,
             format: attributes_get_lit_str(&input.attrs, "format").ok(),
+            generics: &input.generics,
             variants,
         }
     }

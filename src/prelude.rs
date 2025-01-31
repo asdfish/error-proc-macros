@@ -3,7 +3,7 @@ pub use {
     proc_macro_error::{proc_macro_error, Diagnostic, Level},
     quote::{quote, ToTokens},
     syn::{
-        parse_macro_input, Attribute, Data, DeriveInput, Expr, Fields, Ident, Lit, LitStr, Meta, Type,
+        parse_macro_input, Attribute, Data, DeriveInput, Expr, Fields, Generics, Ident, Lit, LitStr, Meta, Type,
         Variant,
     },
 };
